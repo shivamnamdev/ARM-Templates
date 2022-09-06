@@ -1,61 +1,43 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {
-        "name": {
-            "type": "string",
-            "defaultValue": "linkeddemo001"
-        },
-        "location": {
-            "type": "string",
-            "defaultValue": "eastus"
-        }
-    },
-    "variables": {
-        "linked-template": "https://raw.githubusercontent.com/neilpeterson/arm-deployment-demo/master/linked-tempate/artifacts/storage.json",
-        "linked-template-two": "https://raw.githubusercontent.com/neilpeterson/arm-deployment-demo/master/linked-tempate/artifacts/identity.json"
-    },
+    "parameters": {},
+    "variables": {},
     "resources": [
         {
-            "name": "storage",
+            "name": "vote-database",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2019-10-01",
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('linked-template')]",
+                    "uri": "https://raw.githubusercontent.com/neilpeterson/arm-template-collection/master/3-other/linked-template-two-services/azuredeploy-cosmos.json",
                     "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "name": {"value": "[parameters('name')]"},
-                    "location": {"value": "[parameters('location')]"}
                 }
             }
         },
         {
-            "name": "identity",
+            "name": "vote-frontend",
             "type": "Microsoft.Resources/deployments",
             "apiVersion": "2019-10-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Resources/deployments','storage')]"
+                "[resourceId('Microsoft.Resources/deployments', 'vote-database')]"
             ],
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[variables('linked-template-two')]",
+                    "uri": "https://raw.githubusercontent.com/neilpeterson/arm-template-collection/master/3-other/linked-template-two-services/azuredeploy-aci.json",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "name": {"value": "[parameters('name')]"},
-                    "location": {"value": "[parameters('location')]"}
+                    "cosmosDbKey": {
+                        "value": "[reference('vote-database').outputs.dbkey.value]"
+                    },
+                    "cosmosDb": {
+                        "value": "[reference('vote-database').outputs.dbendpoint.value]"
+                    }
                 }
             }
         }
-    ],
-    "outputs": {
-        "storageURI": {
-            "type": "string",
-            "value": "[reference('storage').outputs.storageEndpoint.value]"
-        }
-    }
+    ]
 }
